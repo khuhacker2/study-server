@@ -8,6 +8,7 @@ import (
 
 	"github.com/ant0ine/go-json-rest/rest"
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/gocraft/dbr"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -109,4 +110,44 @@ func writeAuthError(w rest.ResponseWriter) {
 	w.WriteJson(map[string]interface{}{
 		"error": "unauthroized",
 	})
+}
+
+func GetMe(w rest.ResponseWriter, r *rest.Request) {
+	authHeader := r.Header["Authorization"]
+	if authHeader == nil || len(authHeader) == 0 || len(authHeader[0]) < len("Bearer ") {
+		writeAuthError(w)
+		return
+	}
+
+	no, ok := parseToken(authHeader[0][len("Bearer "):])
+	if !ok {
+		writeAuthError(w)
+		return
+	}
+
+	user := User{No: no}
+	user.Get()
+	w.WriteJson(user)
+}
+
+func GetMeStudygroups(w rest.ResponseWriter, r *rest.Request) {
+	authHeader := r.Header["Authorization"]
+	if authHeader == nil || len(authHeader) == 0 || len(authHeader[0]) < len("Bearer ") {
+		writeAuthError(w)
+		return
+	}
+
+	no, ok := parseToken(authHeader[0][len("Bearer "):])
+	if !ok {
+		writeAuthError(w)
+		return
+	}
+
+	groups := []Studygroup{}
+	database.NewSession(nil).Select("g.*").
+		From(dbr.I("studygroups").As("g")).
+		Join(dbr.I("study_members").As("m"), "g.no=m.studygroup").
+		Where("m.user=?", no).Load(&groups)
+
+	w.WriteJson(groups)
 }

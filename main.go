@@ -30,6 +30,8 @@ func main() {
 		rest.Post("/token", PostToken),
 		rest.Get("/studygroups/:no", GetStudygroup),
 		rest.Post("/studygroups", PostStudygroup),
+		rest.Get("/me", GetMe),
+		rest.Get("/me/studygroups", GetMeStudygroups),
 	)
 	if err != nil {
 		log.Fatal(err)
