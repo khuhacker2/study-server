@@ -122,3 +122,11 @@ func PostArticle(w rest.ResponseWriter, r *rest.Request) {
 	article.Get()
 	w.WriteJson(article)
 }
+
+func GetStudygroupsArticles(w rest.ResponseWriter, r *rest.Request) {
+	no, _ := strconv.ParseUint(r.PathParam("no"), 10, 64)
+
+	articles := []Article{}
+	database.NewSession(nil).Select("*").From("articles").Where("studygroup=?", no).Load(&articles)
+	w.WriteJson(articles)
+}

@@ -30,6 +30,7 @@ func main() {
 		rest.Post("/token", PostToken),
 		rest.Get("/studygroups/:no", GetStudygroup),
 		rest.Post("/studygroups", PostStudygroup),
+		rest.Get("/studygroups/:no/articles", GetStudygroupsArticles),
 		rest.Get("/me", GetMe),
 		rest.Get("/me/studygroups", GetMeStudygroups),
 		rest.Get("/articles/:no", GetArticle),
