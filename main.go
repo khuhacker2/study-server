@@ -38,6 +38,7 @@ func main() {
 		rest.Get("/articles/:no/comments", GetArticlesComments),
 		rest.Get("/comments/:no", GetComment),
 		rest.Post("/comments", PostComment),
+		rest.Get("/ws", GetWS),
 	)
 	if err != nil {
 		log.Fatal(err)
