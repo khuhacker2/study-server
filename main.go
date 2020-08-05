@@ -35,6 +35,9 @@ func main() {
 		rest.Get("/me/studygroups", GetMeStudygroups),
 		rest.Get("/articles/:no", GetArticle),
 		rest.Post("/articles", PostArticle),
+		rest.Get("/articles/:no/comments", GetArticlesComments),
+		rest.Get("/comments/:no", GetComment),
+		rest.Post("/comments", PostComment),
 	)
 	if err != nil {
 		log.Fatal(err)

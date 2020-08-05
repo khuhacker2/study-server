@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/ant0ine/go-json-rest/rest"
+	"github.com/gocraft/dbr"
 )
 
 type Studygroup struct {
@@ -129,4 +130,68 @@ func GetStudygroupsArticles(w rest.ResponseWriter, r *rest.Request) {
 	articles := []Article{}
 	database.NewSession(nil).Select("*").From("articles").Where("studygroup=?", no).Load(&articles)
 	w.WriteJson(articles)
+}
+
+type Comment struct {
+	No        uint64    `json:"no" db:"no"`
+	Article   uint64    `json:"article" db:"article"`
+	Author    uint64    `json:"author" db:"author"`
+	Content   string    `json:"content" db:"content"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
+}
+
+func (comment *Comment) Get() {
+	database.NewSession(nil).Select("*").From("comments").Where("no=?", comment.No).Load(comment)
+}
+
+func GetComment(w rest.ResponseWriter, r *rest.Request) {
+	no, _ := strconv.ParseUint(r.PathParam("no"), 10, 64)
+	comment := Comment{No: no}
+	comment.Get()
+
+	w.WriteJson(comment)
+}
+
+func PostComment(w rest.ResponseWriter, r *rest.Request) {
+	authHeader := r.Header["Authorization"]
+	if authHeader == nil || len(authHeader) == 0 || len(authHeader[0]) < len("Bearer ") {
+		writeAuthError(w)
+		return
+	}
+
+	no, ok := parseToken(authHeader[0][len("Bearer "):])
+	if !ok {
+		writeAuthError(w)
+		return
+	}
+
+	props := map[string]interface{}{}
+	r.DecodeJsonPayload(&props)
+
+	joined := 0
+	session := database.NewSession(nil)
+	session.Select("1").From(dbr.I("study_members").As("m")).Join(dbr.I("articles").As("a"), "m.studygroup=a.studygroup").
+		Where("m.user=? AND a.no=?", no, props["article"]).Load(&joined)
+	if joined != 1 {
+		return
+	}
+
+	res, err := session.InsertInto("comments").Columns("article", "author", "content").Values(props["article"], no, props["content"]).Exec()
+	if err != nil {
+		return
+	}
+
+	commentNo, _ := res.LastInsertId()
+
+	comment := Comment{No: uint64(commentNo)}
+	comment.Get()
+	w.WriteJson(comment)
+}
+
+func GetArticlesComments(w rest.ResponseWriter, r *rest.Request) {
+	no, _ := strconv.ParseUint(r.PathParam("no"), 10, 64)
+
+	comments := []Comment{}
+	database.NewSession(nil).Select("*").From("comments").Where("article=?", no).Load(&comments)
+	w.WriteJson(comments)
 }
