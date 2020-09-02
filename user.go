@@ -16,6 +16,7 @@ type User struct {
 	No       uint64    `json:"no" db:"no"`
 	Id       string    `json:"id" db:"id"`
 	Nickname string    `json:"nickname" db:"nickname"`
+	Picture  *string   `json:"picture" db:"picture"`
 	CreateAt time.Time `json:"created_at" db:"created_at"`
 }
 
@@ -130,6 +131,49 @@ func GetMe(w rest.ResponseWriter, r *rest.Request) {
 	w.WriteJson(user)
 }
 
+func PutMe(w rest.ResponseWriter, r *rest.Request) {
+	authHeader := r.Header["Authorization"]
+	if authHeader == nil || len(authHeader) == 0 || len(authHeader[0]) < len("Bearer ") {
+		writeAuthError(w)
+		return
+	}
+
+	no, ok := parseToken(authHeader[0][len("Bearer "):])
+	if !ok {
+		writeAuthError(w)
+		return
+	}
+
+	params := map[string]interface{}{}
+	setMap := map[string]interface{}{}
+	r.DecodeJsonPayload(&params)
+
+	if val, ok := params["password"]; ok {
+		setMap["password"] = sha3.Sum256([]byte(val.(string)))
+	}
+
+	if val, ok := params["nickname"]; ok {
+		setMap["nickname"] = val
+	}
+
+	if val, ok := params["picture"]; ok {
+		setMap["picture"] = val
+	}
+
+	_, err := database.NewSession(nil).Update("users").SetMap(setMap).Where("no=?", no).Exec()
+	if err != nil {
+		w.WriteHeader(http.StatusConflict)
+		w.WriteJson(map[string]interface{}{
+			"error": "conflict",
+		})
+		return
+	}
+
+	user := User{No: no}
+	user.Get()
+	w.WriteJson(user)
+}
+
 func GetMeStudygroups(w rest.ResponseWriter, r *rest.Request) {
 	authHeader := r.Header["Authorization"]
 	if authHeader == nil || len(authHeader) == 0 || len(authHeader[0]) < len("Bearer ") {
@@ -144,10 +188,12 @@ func GetMeStudygroups(w rest.ResponseWriter, r *rest.Request) {
 	}
 
 	groups := []Studygroup{}
-	database.NewSession(nil).Select("g.*").
+	_, err := database.NewSession(nil).Select("g.*").
 		From(dbr.I("studygroups").As("g")).
 		Join(dbr.I("study_members").As("m"), "g.no=m.studygroup").
 		Where("m.user=?", no).Load(&groups)
+
+	fmt.Println(err)
 
 	w.WriteJson(groups)
 }

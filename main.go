@@ -23,26 +23,34 @@ func main() {
 	defer database.Close()
 
 	api := rest.NewApi()
-	api.Use(rest.DefaultDevStack...)
 	router, err := rest.MakeRouter(
 		rest.Get("/users/:no", GetUsers),
 		rest.Post("/users", PostUsers),
 		rest.Post("/token", PostToken),
+		rest.Get("/studygroups/rank", GetStudygroupRank),
 		rest.Get("/studygroups/:no", GetStudygroup),
 		rest.Post("/studygroups", PostStudygroup),
 		rest.Get("/studygroups/:no/articles", GetStudygroupsArticles),
 		rest.Get("/me", GetMe),
+		rest.Put("/me", PutMe),
 		rest.Get("/me/studygroups", GetMeStudygroups),
 		rest.Get("/articles/:no", GetArticle),
 		rest.Post("/articles", PostArticle),
 		rest.Get("/articles/:no/comments", GetArticlesComments),
 		rest.Get("/comments/:no", GetComment),
 		rest.Post("/comments", PostComment),
+		rest.Post("/images", PostImage),
 		rest.Get("/ws", GetWS),
 	)
+
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	api.SetApp(router)
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", configs.Port), api.MakeHandler()))
+
+	http.Handle("/", api.MakeHandler())
+	http.Handle("/files/", http.StripPrefix("/files", http.FileServer(http.Dir("files"))))
+
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", configs.Port), nil))
 }

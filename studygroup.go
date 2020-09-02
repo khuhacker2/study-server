@@ -13,6 +13,7 @@ type Studygroup struct {
 	Category    int       `json:"category" db:"category"`
 	Name        string    `json:"name" db:"name"`
 	Description string    `json:"description" db:"description"`
+	Image       *string   `json:"image" db:"image"`
 	CreatedAt   time.Time `json:"created_at" db:"created_at"`
 }
 
@@ -48,8 +49,8 @@ func PostStudygroup(w rest.ResponseWriter, r *rest.Request) {
 	defer tr.RollbackUnlessCommitted()
 
 	res, err := tr.InsertInto("studygroups").
-		Columns("category", "name", "description").
-		Values(props["category"], props["name"], props["description"]).Exec()
+		Columns("category", "name", "description", "image").
+		Values(props["category"], props["name"], props["description"], props["image"]).Exec()
 
 	if err != nil {
 		return
@@ -66,6 +67,13 @@ func PostStudygroup(w rest.ResponseWriter, r *rest.Request) {
 	study := Studygroup{No: uint64(groupNo)}
 	study.Get()
 	w.WriteJson(study)
+}
+
+func GetStudygroupRank(w rest.ResponseWriter, r *rest.Request) {
+	groups := []Studygroup{}
+	database.NewSession(nil).Select("*").From("studygroups").OrderDesc("members").Limit(10).Load(&groups)
+
+	w.WriteJson(groups)
 }
 
 type Article struct {
